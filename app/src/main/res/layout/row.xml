@@ -10,7 +10,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textSize="20sp"
-        android:text="hey"
-        android:textColor="@color/black"/>
+        android:textColor="@color/black"
+        android:layout_margin="6sp"
+        android:background="@color/app"/>
+
 
 </LinearLayout>
