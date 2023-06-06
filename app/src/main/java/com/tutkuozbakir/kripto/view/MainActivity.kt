@@ -10,6 +10,7 @@ import com.tutkuozbakir.kripto.service.CryptoAPI
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
+import kotlinx.coroutines.*
 import retrofit2.Retrofit
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory
 import retrofit2.converter.gson.GsonConverterFactory
@@ -20,6 +21,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var cryptoList: ArrayList<CryptoModel>
     private lateinit var binding: ActivityMainBinding
     private var compositeDisposable: CompositeDisposable? = null
+    private var job : Job? = null
+
+    private val exceptionHandler =  CoroutineExceptionHandler { coroutineContext, throwable ->
+        println(throwable.localizedMessage)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,17 +33,47 @@ class MainActivity : AppCompatActivity() {
         val view = binding.root
         setContentView(view)
 
-        compositeDisposable = CompositeDisposable()
+        //compositeDisposable = CompositeDisposable()
 
         binding.recyclerview.layoutManager = LinearLayoutManager(this)
         loadData()
     }
 
+    /*
+    -----------------RxJava-------------------
     private fun handleResponse(list: List<CryptoModel>){
         cryptoList = ArrayList(list)
         binding.recyclerview.adapter = RecyclerViewAdapter(cryptoList)
     }
+
+     */
+
     private fun loadData(){
+        val retrofit = Retrofit.Builder()
+            .baseUrl(BASE_URL).
+            addConverterFactory(GsonConverterFactory.create())
+            .build().create(CryptoAPI::class.java)
+
+        job = CoroutineScope(Dispatchers.IO + exceptionHandler).launch {
+            val response = retrofit.getData()
+
+            withContext(Dispatchers.Main){
+                if(response.isSuccessful){
+                    response.body()?.let{
+                        cryptoList = ArrayList(it)
+                        cryptoList.let{
+                            binding.recyclerview.adapter = RecyclerViewAdapter(cryptoList)
+                        }
+                    }
+                }
+            }
+        }
+
+
+
+    /*
+
+    --------------------------RxJava---------------------------
 
         val retrofit = Retrofit.Builder()
             .baseUrl(BASE_URL).
@@ -50,6 +86,8 @@ class MainActivity : AppCompatActivity() {
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe(this::handleResponse))
 
+
+     */
         /*
 
         --------------------------CALL---------------------------
@@ -79,5 +117,6 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         compositeDisposable?.clear()
+        job?.cancel()
     }
 }
